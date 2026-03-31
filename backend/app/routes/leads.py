@@ -8,6 +8,11 @@ from app.services.scraper_service import trigger_scrape
 
 router = APIRouter(prefix="/leads", tags=["leads"])
 
+def serialize(data: dict) -> dict:
+    from uuid import UUID
+    return {k: str(v) if isinstance(v, UUID) else v for k, v in data.items()}
+
+
 
 @router.post("/", response_model=LeadOut, status_code=status.HTTP_201_CREATED)
 def create_lead(
@@ -20,7 +25,7 @@ def create_lead(
     if not payload.get("assigned_to"):
         payload["assigned_to"] = token.user_id
 
-    result = db.table("leads").insert(payload).execute()
+    result = db.table("leads").insert(serialize(payload)).execute()
     lead = result.data[0]
 
     # Fire scrape in background immediately on creation
@@ -64,7 +69,7 @@ def get_lead(lead_id: UUID, token: TokenData = Depends(decode_token)):
 def update_lead(lead_id: UUID, data: LeadUpdate, token: TokenData = Depends(require_caller)):
     db = get_db()
     payload = {k: v for k, v in data.model_dump().items() if v is not None}
-    result = db.table("leads").update(payload).eq("id", str(lead_id)).execute()
+    result = db.table("leads").update(serialize(payload)).eq("id", str(lead_id)).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
     return result.data[0]

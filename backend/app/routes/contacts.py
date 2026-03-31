@@ -7,15 +7,16 @@ from app.middleware.auth import decode_token, TokenData
 router = APIRouter(prefix="/contacts", tags=["contacts"])
 
 
+def serialize(data: dict) -> dict:
+    return {k: str(v) if isinstance(v, UUID) else v for k, v in data.items()}
+
+
 @router.post("/", response_model=ContactOut, status_code=status.HTTP_201_CREATED)
 def create_contact(data: ContactCreate, token: TokenData = Depends(decode_token)):
     db = get_db()
-
-    # If marked primary, demote existing primary for this lead
     if data.is_primary:
         db.table("contacts").update({"is_primary": False}).eq("lead_id", str(data.lead_id)).execute()
-
-    result = db.table("contacts").insert(data.model_dump()).execute()
+    result = db.table("contacts").insert(serialize(data.model_dump())).execute()
     return result.data[0]
 
 
@@ -30,13 +31,11 @@ def get_contacts_for_lead(lead_id: UUID, token: TokenData = Depends(decode_token
 def update_contact(contact_id: UUID, data: ContactUpdate, token: TokenData = Depends(decode_token)):
     db = get_db()
     payload = {k: v for k, v in data.model_dump().items() if v is not None}
-
     if payload.get("is_primary"):
         contact = db.table("contacts").select("lead_id").eq("id", str(contact_id)).single().execute()
         if contact.data:
             db.table("contacts").update({"is_primary": False}).eq("lead_id", contact.data["lead_id"]).execute()
-
-    result = db.table("contacts").update(payload).eq("id", str(contact_id)).execute()
+    result = db.table("contacts").update(serialize(payload)).eq("id", str(contact_id)).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Contact not found")
     return result.data[0]

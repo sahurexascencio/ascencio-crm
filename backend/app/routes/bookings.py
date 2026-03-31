@@ -8,6 +8,11 @@ from app.middleware.auth import decode_token, TokenData
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
+def serialize(data: dict) -> dict:
+    from uuid import UUID
+    return {k: str(v) if isinstance(v, UUID) else v for k, v in data.items()}
+
+
 
 @router.post("/", response_model=BookingOut, status_code=status.HTTP_201_CREATED)
 def create_booking(data: BookingCreate, token: TokenData = Depends(decode_token)):
@@ -81,7 +86,7 @@ def update_booking(booking_id: UUID, data: BookingUpdate, token: TokenData = Dep
             rate = Decimal(str(payload.get("commission_rate", current.data["commission_rate"])))
             payload["commission_amount"] = str((value * rate).quantize(Decimal("0.01")))
 
-    result = db.table("bookings").update(payload).eq("id", str(booking_id)).execute()
+    result = db.table("bookings").update(serialize(payload)).eq("id", str(booking_id)).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Booking not found")
     return result.data[0]
