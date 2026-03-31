@@ -10,7 +10,7 @@ from app.config import settings
 
 router = APIRouter(prefix="/calls", tags=["calls"])
 
-WEBHOOK_BASE = "https://your-railway-app.up.railway.app"  # update post-deploy
+WEBHOOK_BASE = "https://ascencio-crm-production.up.railway.app"  # update post-deploy
 
 
 @router.post("/initiate", response_model=CallOut, status_code=status.HTTP_201_CREATED)
