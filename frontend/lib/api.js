@@ -1,4 +1,4 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const BASE = "https://ascencio-crm-production.up.railway.app";
 
 function getToken() {
   if (typeof window === "undefined") return null;
