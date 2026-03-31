@@ -84,7 +84,7 @@ def _build_talking_points(lead: dict, intel: dict | None) -> list[str]:
         points.append(f"Google rating is {intel['google_rating']} — mention reputation management as quick win")
     if not intel.get("is_running_ads"):
         points.append("Not running ads — frame as untapped growth, competitors are ahead")
-    if intel.get("google_reviews_count", 0) < 20:
+    if (intel.get("google_reviews_count") or 0) < 20:
         points.append("Few Google reviews — review generation campaign is an easy first sell")
 
     points.append(f"Ask: what's the current cost of acquiring a new {industry} client?")
