@@ -88,3 +88,26 @@ export const bookings = {
   create: (data) => request("/bookings", { method: "POST", body: JSON.stringify(data) }),
   update: (id, data) => request(`/bookings/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 };
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+export const tasks = {
+  forLead: (leadId) => request(`/tasks/lead/${leadId}`),
+  upcoming: () => request("/tasks/upcoming"),
+  create: (data) => request("/tasks", { method: "POST", body: JSON.stringify(data) }),
+  update: (id, data) => request(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  delete: (id) => request(`/tasks/${id}`, { method: "DELETE" }),
+};
+
+// ── Templates ─────────────────────────────────────────────────────────────────
+export const templates = {
+  list: (type) => request(`/templates${type ? `?type=${type}` : ""}`),
+  create: (data) => request("/templates", { method: "POST", body: JSON.stringify(data) }),
+  update: (id, data) => request(`/templates/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  delete: (id) => request(`/templates/${id}`, { method: "DELETE" }),
+};
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+export const messages = {
+  forLead: (leadId) => request(`/messages/lead/${leadId}`),
+  sendSMS: (data) => request("/messages/sms", { method: "POST", body: JSON.stringify(data) }),
+};
