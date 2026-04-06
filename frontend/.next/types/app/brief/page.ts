@@ -1,4 +1,4 @@
-// File: C:\Users\khale\ascencio-crm\frontend\app\brief\page.jsx
+// File: C:\Users\pc\OneDrive\Desktop\ascencio-crm\frontend\app\brief\page.jsx
 import * as entry from '../../../../app/brief/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

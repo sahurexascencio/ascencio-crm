@@ -1,62 +1,149 @@
 "use client";
 import { useState } from "react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { C, T } from "@/lib/tokens";
+
+const inputStyle = {
+  width: "100%", padding: "11px 14px",
+  background: "var(--bg-primary)",
+  border: "1px solid var(--border)",
+  borderRadius: 9,
+  fontFamily: "'DM Sans', sans-serif", fontSize: 14,
+  color: "var(--text-primary)",
+  outline: "none",
+  transition: "border-color 0.2s",
+};
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading,  setLoading]  = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
     try {
       await login(email, password);
     } catch (err) {
-      setError(err.message || "Invalid credentials");
+      toast.error(err.message || "Invalid credentials");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 380, padding: "40px 36px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
-        <div style={{ marginBottom: 32, textAlign: "center" }}>
-          <div style={{ ...T.heading, fontSize: 22, fontWeight: 800, color: C.text, letterSpacing: "-0.02em", marginBottom: 4 }}>
-            <span style={{ color: C.accent }}>A</span>SCENCIO
+    <div style={{
+      minHeight: "100vh",
+      background: "var(--bg-primary)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 20,
+    }}>
+      <motion.div
+        initial={{ opacity: 0, y: 28 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          width: "100%", maxWidth: 400,
+          padding: "44px 40px",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 20,
+          boxShadow: "var(--shadow)",
+        }}
+      >
+        {/* Logo */}
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          style={{ marginBottom: 38, textAlign: "center" }}
+        >
+          <div style={{
+            fontFamily: "'Syne', sans-serif",
+            fontSize: 26, fontWeight: 800,
+            color: "var(--text-primary)", letterSpacing: "-0.02em",
+            marginBottom: 5,
+          }}>
+            <span className="gold-pulse">A</span>SCENCIO
           </div>
-          <div style={{ ...T.mono, fontSize: 10, color: C.muted, letterSpacing: "0.06em" }}>PERFORMANCE AGENCY</div>
-        </div>
+          <div style={{
+            fontFamily: "'DM Mono', monospace",
+            fontSize: 10, color: "var(--text-secondary)", letterSpacing: "0.1em",
+          }}>PERFORMANCE AGENCY</div>
+        </motion.div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <label style={{ ...T.mono, fontSize: 10, color: C.muted, letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>EMAIL</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-              style={{ width: "100%", padding: "10px 12px", background: C.subtle, border: `1px solid ${C.border}`, borderRadius: 8, ...T.body, fontSize: 14, color: C.text, outline: "none" }} />
-          </div>
-          <div>
-            <label style={{ ...T.mono, fontSize: 10, color: C.muted, letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>PASSWORD</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
-              style={{ width: "100%", padding: "10px 12px", background: C.subtle, border: `1px solid ${C.border}`, borderRadius: 8, ...T.body, fontSize: 14, color: C.text, outline: "none" }} />
-          </div>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Email */}
+          <motion.div
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2, duration: 0.35 }}
+          >
+            <label style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 10, color: "var(--text-secondary)",
+              letterSpacing: "0.08em", display: "block", marginBottom: 7,
+            }}>EMAIL</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              style={inputStyle}
+              onFocus={e => (e.target.style.borderColor = "var(--gold)")}
+              onBlur={e  => (e.target.style.borderColor = "var(--border)")}
+            />
+          </motion.div>
 
-          {error && (
-            <div style={{ ...T.body, fontSize: 12, color: "#C0392B", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 7, padding: "8px 12px" }}>
-              {error}
-            </div>
-          )}
+          {/* Password */}
+          <motion.div
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.27, duration: 0.35 }}
+          >
+            <label style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 10, color: "var(--text-secondary)",
+              letterSpacing: "0.08em", display: "block", marginBottom: 7,
+            }}>PASSWORD</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              style={inputStyle}
+              onFocus={e => (e.target.style.borderColor = "var(--gold)")}
+              onBlur={e  => (e.target.style.borderColor = "var(--border)")}
+            />
+          </motion.div>
 
-          <button type="submit" disabled={loading}
-            style={{ marginTop: 6, padding: "11px", borderRadius: 9, border: "none", background: C.accent, color: "#FFFFFF", ...T.body, fontSize: 14, fontWeight: 500, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1 }}>
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
+          {/* Submit */}
+          <motion.button
+            type="submit"
+            disabled={loading}
+            whileHover={loading ? {} : { scale: 1.015 }}
+            whileTap={loading ? {}   : { scale: 0.98  }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35 }}
+            style={{
+              marginTop: 10, padding: "13px",
+              borderRadius: 10, border: "none",
+              background: "var(--gold)",
+              color: "#0A0B0F",
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 14, fontWeight: 600,
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.7 : 1,
+              transition: "opacity 0.15s",
+            }}
+          >
+            {loading ? "Signing in..." : "Sign in →"}
+          </motion.button>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }
