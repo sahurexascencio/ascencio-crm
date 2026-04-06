@@ -1,4 +1,4 @@
-const BASE = "https://ascencio-crm-production.up.railway.app";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "https://ascencio-crm-production.up.railway.app";
 
 function getToken() {
   if (typeof window === "undefined") return null;
