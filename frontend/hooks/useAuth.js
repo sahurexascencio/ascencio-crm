@@ -26,6 +26,12 @@ export function AuthProvider({ children }) {
     router.push("/pipeline");
   };
 
+  const updateUser = (data) => {
+    const updated = { ...user, ...data };
+    localStorage.setItem("ascencio_user", JSON.stringify(updated));
+    setUser(updated);
+  };
+
   const logout = () => {
     localStorage.removeItem("ascencio_token");
     localStorage.removeItem("ascencio_user");
@@ -34,7 +40,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

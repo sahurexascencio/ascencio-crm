@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { LayoutDashboard, LayoutGrid, Phone, TrendingUp, CheckSquare, MessageSquare, Sun, Moon, LogOut, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { LayoutDashboard, LayoutGrid, Phone, TrendingUp, CheckSquare, MessageSquare, Settings, Sun, Moon, LogOut, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const NAV = [
@@ -56,7 +56,9 @@ export default function Shell({ children, topbarText, onAddLead }) {
   const { user, loading, logout } = useAuth();
   const router   = useRouter();
   const pathname = usePathname();
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme]       = useState("dark");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("ascencio_theme") || "dark";
@@ -75,11 +77,28 @@ export default function Shell({ children, topbarText, onAddLead }) {
 
   if (!isPreview && (loading || !user)) return null;
 
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
     localStorage.setItem("ascencio_theme", next);
     document.documentElement.setAttribute("data-theme", next);
+  };
+
+  const handleLogout = () => {
+    setMenuOpen(false);
+    // TEMP - REMOVE BEFORE PRODUCTION
+    localStorage.removeItem("preview_mode");
+    logout();
   };
 
   const initial = activeUser.name?.[0]?.toUpperCase() || "U";
@@ -151,49 +170,88 @@ export default function Shell({ children, topbarText, onAddLead }) {
             {theme === "dark" ? "Light mode" : "Dark mode"}
           </motion.button>
 
-          {/* User card */}
-          <div style={{
-            display: "flex", gap: 8, alignItems: "center",
-            padding: "10px 12px", borderRadius: 9,
-            background: "var(--bg-card)", border: "1px solid var(--border)",
-          }}>
-            <div style={{
-              width: 30, height: 30, borderRadius: "50%",
-              background: "var(--gold-dim)",
-              border: "1px solid var(--gold)",
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}>
-              <span style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: 12, fontWeight: 700, color: "var(--gold)",
-              }}>{initial}</span>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 12, fontWeight: 500,
-                color: "var(--text-primary)",
-                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-              }}>{activeUser.name}</div>
-              <div style={{
-                fontFamily: "'DM Mono', monospace",
-                fontSize: 10, color: "var(--text-secondary)", textTransform: "capitalize",
-              }}>{activeUser.role?.replace("_", " ")}</div>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={logout}
+          {/* User card — clickable, opens pop-up menu */}
+          <div ref={menuRef} style={{ position: "relative" }}>
+            <AnimatePresence>
+              {menuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                  style={{
+                    position: "absolute", bottom: "calc(100% + 8px)", left: 0, right: 0,
+                    background: "var(--bg-card)", border: "1px solid var(--border)",
+                    borderRadius: 10, overflow: "hidden",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+                    zIndex: 50,
+                  }}
+                >
+                  {[
+                    { icon: Settings, label: "Settings", onClick: () => { setMenuOpen(false); router.push("/settings"); } },
+                    { icon: LogOut,   label: "Log out",  onClick: handleLogout, danger: true },
+                  ].map(({ icon: Icon, label, onClick, danger }) => (
+                    <motion.button
+                      key={label}
+                      whileHover={{ background: danger ? "rgba(239,68,68,0.07)" : "var(--bg-secondary)" }}
+                      onClick={onClick}
+                      style={{
+                        width: "100%", display: "flex", alignItems: "center", gap: 9,
+                        padding: "10px 14px", background: "transparent", border: "none",
+                        color: danger ? "#EF4444" : "var(--text-secondary)",
+                        fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+                        cursor: "pointer", textAlign: "left",
+                      }}
+                    >
+                      <Icon size={13} strokeWidth={1.8} />
+                      {label}
+                    </motion.button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <motion.div
+              whileHover={{ borderColor: "var(--gold)" }}
+              onClick={() => setMenuOpen(o => !o)}
               style={{
-                background: "transparent", border: "none",
-                color: "var(--text-secondary)", padding: 4,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                borderRadius: 6, transition: "color 0.15s",
+                display: "flex", gap: 8, alignItems: "center",
+                padding: "10px 12px", borderRadius: 9,
+                background: "var(--bg-card)", border: "1px solid var(--border)",
+                cursor: "pointer", transition: "border-color 0.15s",
               }}
-              title="Sign out"
             >
-              <LogOut size={13} strokeWidth={1.8} />
-            </motion.button>
+              <div style={{
+                width: 30, height: 30, borderRadius: "50%",
+                background: "var(--gold-dim)", border: "1px solid var(--gold)",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 12, fontWeight: 700, color: "var(--gold)" }}>
+                  {initial}
+                </span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500,
+                  color: "var(--text-primary)",
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                }}>{activeUser.name}</div>
+                <div style={{
+                  fontFamily: "'DM Mono', monospace", fontSize: 10,
+                  color: "var(--text-secondary)", textTransform: "capitalize",
+                }}>{activeUser.role?.replace("_", " ")}</div>
+              </div>
+              <ChevronRight
+                size={13}
+                strokeWidth={1.8}
+                color="var(--text-secondary)"
+                style={{
+                  transform: menuOpen ? "rotate(90deg)" : "rotate(0deg)",
+                  transition: "transform 0.2s",
+                  flexShrink: 0,
+                }}
+              />
+            </motion.div>
           </div>
         </div>
       </div>

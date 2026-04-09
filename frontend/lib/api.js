@@ -31,6 +31,16 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+// ── Users ─────────────────────────────────────────────────────────────────────
+export const users = {
+  me: () => request("/users/me"),
+  updateMe: (data) => request("/users/me", { method: "PATCH", body: JSON.stringify(data) }),
+  changePassword: (data) => request("/users/me/password", { method: "POST", body: JSON.stringify(data) }),
+  list: () => request("/users"),
+  invite: (data) => request("/users/invite", { method: "POST", body: JSON.stringify(data) }),
+  remove: (id) => request(`/users/${id}`, { method: "DELETE" }),
+};
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export const dashboard = {
   summary: () => request("/dashboard/summary"),
