@@ -21,15 +21,25 @@
       "static/chunks/main-app.js",
       "static/chunks/app/pipeline/page.js"
     ],
+    "/revenue/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/revenue/page.js"
+    ],
+    "/tasks/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/tasks/page.js"
+    ],
     "/brief/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/brief/page.js"
     ],
-    "/revenue/page": [
+    "/templates/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/revenue/page.js"
+      "static/chunks/app/templates/page.js"
     ]
   }
 }
