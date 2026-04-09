@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { LayoutGrid, Phone, TrendingUp, Sun, Moon, LogOut, ChevronRight } from "lucide-react";
+import { LayoutGrid, Phone, TrendingUp, CheckSquare, Sun, Moon, LogOut, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const NAV = [
-  { icon: LayoutGrid, label: "Pipeline",       href: "/pipeline" },
+  { icon: LayoutGrid,  label: "Pipeline",       href: "/pipeline" },
   { icon: Phone,       label: "Pre-Call Brief",  href: "/brief"    },
+  { icon: CheckSquare, label: "Tasks",            href: "/tasks"    },
   { icon: TrendingUp,  label: "Revenue",          href: "/revenue"  },
 ];
 

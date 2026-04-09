@@ -91,6 +91,7 @@ export const bookings = {
 
 // ── Tasks ─────────────────────────────────────────────────────────────────────
 export const tasks = {
+  list: () => request("/tasks"),
   forLead: (leadId) => request(`/tasks/lead/${leadId}`),
   upcoming: () => request("/tasks/upcoming"),
   create: (data) => request("/tasks", { method: "POST", body: JSON.stringify(data) }),

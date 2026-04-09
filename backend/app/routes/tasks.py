@@ -45,6 +45,19 @@ def get_tasks_for_lead(lead_id: UUID, token: TokenData = Depends(decode_token)):
     return result.data
 
 
+@router.get("")
+def list_tasks(token: TokenData = Depends(decode_token)):
+    db = get_db()
+    result = db.table("tasks").select("*, leads(business_name)").order("due_date").execute()
+    rows = []
+    for row in result.data:
+        flat = dict(row)
+        lead = flat.pop("leads", None)
+        flat["business_name"] = lead.get("business_name") if lead else None
+        rows.append(flat)
+    return rows
+
+
 @router.get("/upcoming")
 def get_upcoming_tasks(token: TokenData = Depends(decode_token)):
     db = get_db()
