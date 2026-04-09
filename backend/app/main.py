@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, leads, contacts, calls, bookings, intelligence, tasks, templates, messages
+from app.routes import auth, leads, contacts, calls, bookings, intelligence, tasks, templates, messages, dashboard
 
 app = FastAPI(
     title="Ascencio CRM",
@@ -21,6 +21,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(dashboard.router)
 app.include_router(leads.router)
 app.include_router(contacts.router)
 app.include_router(calls.router)

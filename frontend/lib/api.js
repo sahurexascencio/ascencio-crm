@@ -31,6 +31,11 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+export const dashboard = {
+  summary: () => request("/dashboard/summary"),
+};
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const auth = {
   login: (email, password) =>

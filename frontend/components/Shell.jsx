@@ -3,15 +3,16 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { LayoutGrid, Phone, TrendingUp, CheckSquare, MessageSquare, Sun, Moon, LogOut, ChevronRight } from "lucide-react";
+import { LayoutDashboard, LayoutGrid, Phone, TrendingUp, CheckSquare, MessageSquare, Sun, Moon, LogOut, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const NAV = [
-  { icon: LayoutGrid,   label: "Pipeline",       href: "/pipeline"   },
-  { icon: Phone,        label: "Pre-Call Brief",  href: "/brief"      },
-  { icon: CheckSquare,  label: "Tasks",            href: "/tasks"      },
-  { icon: MessageSquare, label: "Templates",       href: "/templates" },
-  { icon: TrendingUp,   label: "Revenue",          href: "/revenue"    },
+  { icon: LayoutDashboard, label: "Dashboard",       href: "/dashboard"  },
+  { icon: LayoutGrid,      label: "Pipeline",       href: "/pipeline"   },
+  { icon: Phone,           label: "Pre-Call Brief",  href: "/brief"      },
+  { icon: CheckSquare,     label: "Tasks",            href: "/tasks"      },
+  { icon: MessageSquare,   label: "Templates",       href: "/templates" },
+  { icon: TrendingUp,      label: "Revenue",          href: "/revenue"    },
 ];
 
 function NavItem({ icon: Icon, label, href, active }) {
