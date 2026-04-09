@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import Link from "next/link";
 import Shell from "@/components/Shell";
 import { StatusSelect } from "@/components/ui";
 import { C, ALL_STATUSES, STATUS_META } from "@/lib/tokens";
@@ -692,9 +693,14 @@ export default function PipelinePage() {
                         >
                           {/* Business */}
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: "var(--text-primary)", marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {lead.business_name}
-                            </div>
+                            <Link href={`/leads/${lead.id}`} style={{ textDecoration: "none" }}>
+                              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: "var(--text-primary)", marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer" }}
+                                onMouseEnter={e => { e.currentTarget.style.color = "var(--gold)"; e.currentTarget.style.textDecoration = "underline"; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = "var(--text-primary)"; e.currentTarget.style.textDecoration = "none"; }}
+                              >
+                                {lead.business_name}
+                              </div>
+                            </Link>
                             <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "var(--text-secondary)" }}>
                               {[lead.city, lead.industry].filter(Boolean).join(" · ")}
                             </div>
