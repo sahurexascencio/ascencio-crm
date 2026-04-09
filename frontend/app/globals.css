@@ -65,6 +65,11 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+.skeleton-pulse { animation: skeletonPulse 1.6s ease-in-out infinite; }
 
 .fade-up    { animation: fadeUp 0.35s cubic-bezier(0.22,1,0.36,1) forwards; }
 .note-slide { animation: noteSlide 0.2s ease forwards; }

@@ -49,7 +49,7 @@ function NavItem({ icon: Icon, label, href, active }) {
   );
 }
 
-export default function Shell({ children, topbarText }) {
+export default function Shell({ children, topbarText, onAddLead }) {
   const { user, loading, logout } = useAuth();
   const router   = useRouter();
   const pathname = usePathname();
@@ -61,11 +61,16 @@ export default function Shell({ children, topbarText }) {
     document.documentElement.setAttribute("data-theme", saved);
   }, []);
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [user, loading]);
+  // TEMP - REMOVE BEFORE PRODUCTION
+  const isPreview = typeof window !== "undefined" && localStorage.getItem("preview_mode") === "1";
+  const previewUser = { name: "Preview User", role: "admin" };
+  const activeUser = isPreview ? previewUser : user;
 
-  if (loading || !user) return null;
+  useEffect(() => {
+    if (!isPreview && !loading && !user) router.replace("/login");
+  }, [user, loading, isPreview]);
+
+  if (!isPreview && (loading || !user)) return null;
 
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
@@ -74,7 +79,7 @@ export default function Shell({ children, topbarText }) {
     document.documentElement.setAttribute("data-theme", next);
   };
 
-  const initial = user.name?.[0]?.toUpperCase() || "U";
+  const initial = activeUser.name?.[0]?.toUpperCase() || "U";
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "var(--bg-primary)", overflow: "hidden" }}>
@@ -166,11 +171,11 @@ export default function Shell({ children, topbarText }) {
                 fontSize: 12, fontWeight: 500,
                 color: "var(--text-primary)",
                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-              }}>{user.name}</div>
+              }}>{activeUser.name}</div>
               <div style={{
                 fontFamily: "'DM Mono', monospace",
                 fontSize: 10, color: "var(--text-secondary)", textTransform: "capitalize",
-              }}>{user.role?.replace("_", " ")}</div>
+              }}>{activeUser.role?.replace("_", " ")}</div>
             </div>
             <motion.button
               whileHover={{ scale: 1.15 }}
@@ -208,14 +213,21 @@ export default function Shell({ children, topbarText }) {
           }}>{topbarText}</div>
 
           <div style={{ display: "flex", gap: 7 }}>
-            {["⬆ Import", "+ Add Lead"].map(label => (
-              <button key={label} style={{
+            <button style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 12, padding: "6px 14px", borderRadius: 7,
+              border: "1px solid var(--border)",
+              background: "transparent", color: "var(--text-secondary)",
+            }}>⬆ Import</button>
+            <button
+              onClick={onAddLead}
+              style={{
                 fontFamily: "'DM Sans', sans-serif",
                 fontSize: 12, padding: "6px 14px", borderRadius: 7,
                 border: "1px solid var(--border)",
                 background: "transparent", color: "var(--text-secondary)",
-              }}>{label}</button>
-            ))}
+              }}
+            >+ Add Lead</button>
             <button style={{
               fontFamily: "'DM Sans', sans-serif",
               fontSize: 12, fontWeight: 600, padding: "6px 16px", borderRadius: 7,

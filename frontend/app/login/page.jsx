@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
 const inputStyle = {
   width: "100%", padding: "11px 14px",
@@ -17,6 +18,7 @@ const inputStyle = {
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const router = useRouter();
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
   const [loading,  setLoading]  = useState(false);
@@ -143,6 +145,18 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign in →"}
           </motion.button>
         </form>
+
+        {/* TEMP - REMOVE BEFORE PRODUCTION */}
+        <button
+          onClick={() => { localStorage.setItem("preview_mode", "1"); router.push("/pipeline"); }}
+          style={{
+            marginTop: 12, width: "100%", padding: "10px",
+            borderRadius: 10, border: "1px dashed var(--border)",
+            background: "transparent", color: "var(--text-secondary)",
+            fontFamily: "'DM Mono', monospace", fontSize: 11,
+            letterSpacing: "0.05em", cursor: "pointer",
+          }}
+        >Preview UI →</button>
       </motion.div>
     </div>
   );
