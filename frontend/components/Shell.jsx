@@ -3,12 +3,13 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, LayoutGrid, Phone, TrendingUp, CheckSquare, MessageSquare, Settings, Sun, Moon, LogOut, ChevronRight } from "lucide-react";
+import { LayoutDashboard, LayoutGrid, Phone, PhoneCall, TrendingUp, CheckSquare, MessageSquare, Settings, Sun, Moon, LogOut, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard",       href: "/dashboard"  },
   { icon: LayoutGrid,      label: "Pipeline",       href: "/pipeline"   },
+  { icon: PhoneCall,       label: "Call Mode",        href: "/call-mode"  },
   { icon: Phone,           label: "Pre-Call Brief",  href: "/brief"      },
   { icon: CheckSquare,     label: "Tasks",            href: "/tasks"      },
   { icon: MessageSquare,   label: "Templates",       href: "/templates" },
@@ -52,7 +53,7 @@ function NavItem({ icon: Icon, label, href, active }) {
   );
 }
 
-export default function Shell({ children, topbarText, onAddLead }) {
+export default function Shell({ children, topbarText, onAddLead, contentStyle }) {
   const { user, loading, logout } = useAuth();
   const router   = useRouter();
   const pathname = usePathname();
@@ -298,7 +299,7 @@ export default function Shell({ children, topbarText, onAddLead }) {
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px", ...contentStyle }}>
           {children}
         </div>
       </div>
