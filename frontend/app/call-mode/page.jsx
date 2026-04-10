@@ -1,15 +1,14 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
   PhoneCall, PhoneOff, PhoneIncoming, PhoneMissed,
-  ChevronDown, ChevronRight, ExternalLink, Clock,
+  ChevronDown, ExternalLink,
   CheckCircle2, Calendar, Mail, XCircle,
   ArrowRight, Minimize2, Maximize2, X, Plus,
-  FileText, Star, Globe, BarChart2, Zap,
-  MessageSquare, Search, Loader2,
+  Zap, Search, Loader2,
 } from "lucide-react";
 import Shell from "@/components/Shell";
 import {
@@ -173,7 +172,7 @@ function LeadSelector({ leads, selectedIdx, onChange }) {
                 <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "var(--text-secondary)", padding: "12px 10px", textAlign: "center" }}>
                   No leads found
                 </p>
-              ) : filtered.map((l, i) => {
+              ) : filtered.map((l) => {
                 const realIdx = leads.indexOf(l);
                 const active = realIdx === selectedIdx;
                 const m = STATUS_META[l.status] || STATUS_META.new;
@@ -484,7 +483,6 @@ function LeftPanel({ lead, contact, callHistory, notes, setNotes, loadingLead, o
         <textarea
           value={notes}
           onChange={e => setNotes(e.target.value)}
-          onBlur={handleBlur}
           placeholder="Add notes about this lead…"
           rows={4}
           style={{
@@ -897,7 +895,7 @@ export default function CallModePage() {
   // Call state
   const [callState, setCallState]     = useState("idle");
   const [callSeconds, setCallSeconds] = useState(0);
-  const [activeCallId, setActiveCallId] = useState(null);
+  const [_activeCallId, setActiveCallId] = useState(null);
   const [starting, setStarting]       = useState(false);
   const timerRef = useRef(null);
 
