@@ -53,7 +53,7 @@ function NavItem({ icon: Icon, label, href, active }) {
   );
 }
 
-export default function Shell({ children, topbarText, onAddLead, contentStyle }) {
+export default function Shell({ children, topbarText, onAddLead, onImport, contentStyle }) {
   const { user, loading, logout } = useAuth();
   const router   = useRouter();
   const pathname = usePathname();
@@ -275,12 +275,14 @@ export default function Shell({ children, topbarText, onAddLead, contentStyle })
           }}>{topbarText}</div>
 
           <div style={{ display: "flex", gap: 7 }}>
-            <button style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 12, padding: "6px 14px", borderRadius: 7,
-              border: "1px solid var(--border)",
-              background: "transparent", color: "var(--text-secondary)",
-            }}>⬆ Import</button>
+            <button
+              onClick={onImport}
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 12, padding: "6px 14px", borderRadius: 7,
+                border: "1px solid var(--border)",
+                background: "transparent", color: "var(--text-secondary)",
+              }}>⬆ Import</button>
             <button
               onClick={onAddLead}
               style={{

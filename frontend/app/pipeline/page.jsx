@@ -489,6 +489,324 @@ function PrimaryBtn({ children, onClick, disabled, style }) {
   );
 }
 
+// ── Import Modal ──────────────────────────────────────────────────────────────
+const SAMPLE_CSV = `business_name,industry,city,country,website_url,contact_name,contact_phone,contact_email
+Bright Smile Dental,dental,Dubai,UAE,brightsmile.ae,Sarah Ahmed,+971501234567,sarah@brightsmile.ae
+Glow Aesthetics,aesthetics,Abu Dhabi,UAE,glowaesthetics.com,Lena Khalid,+971509876543,lena@glowaesthetics.com`;
+
+function ImportModal({ onClose, onImported }) {
+  const [file,     setFile]     = useState(null);
+  const [rows,     setRows]     = useState([]);
+  const [headers,  setHeaders]  = useState([]);
+  const [phase,    setPhase]    = useState("upload"); // upload | preview | importing | done
+  const [progress, setProgress] = useState(0);
+  const [results,  setResults]  = useState({ ok: 0, failed: [], total: 0 });
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef(null);
+
+  const parseCSV = (text) => {
+    const lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) return { headers: [], rows: [] };
+    const hdrs = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+    const data = lines.slice(1).map(line => {
+      const vals = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || [];
+      const clean = vals.map(v => v.trim().replace(/^"|"$/g, ""));
+      return Object.fromEntries(hdrs.map((h, i) => [h, clean[i] ?? ""]));
+    }).filter(r => Object.values(r).some(v => v !== ""));
+    return { headers: hdrs, rows: data };
+  };
+
+  const handleFile = (f) => {
+    if (!f || !f.name.endsWith(".csv")) { toast.error("Please upload a .csv file"); return; }
+    setFile(f);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const { headers: hdrs, rows: data } = parseCSV(e.target.result);
+      setHeaders(hdrs);
+      setRows(data);
+      setPhase("preview");
+    };
+    reader.readAsText(f);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    handleFile(e.dataTransfer.files[0]);
+  };
+
+  const downloadSample = () => {
+    const blob = new Blob([SAMPLE_CSV], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = "ascencio_sample.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const runImport = async () => {
+    setPhase("importing");
+    let ok = 0;
+    const failed = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      try {
+        const leadPayload = {
+          business_name: row.business_name || row["Business Name"] || "",
+          industry:      row.industry || "other",
+          city:          row.city || "",
+          country:       row.country || "",
+          website_url:   row.website_url || row.website || "",
+          status:        "new",
+        };
+        if (!leadPayload.business_name) throw new Error("Missing business_name");
+        const lead = await leadsApi.create(leadPayload);
+        if (row.contact_name || row.contact_phone || row.contact_email) {
+          await contactsApi.create({
+            lead_id: lead.id,
+            name:    row.contact_name  || row["Contact Name"]  || "",
+            phone:   row.contact_phone || row["Contact Phone"] || "",
+            email:   row.contact_email || row["Contact Email"] || "",
+            is_primary: true,
+          });
+        }
+        ok++;
+      } catch (e) {
+        failed.push({ row: i + 1, name: row.business_name || `Row ${i + 1}`, reason: e.message });
+      }
+      setProgress(Math.round(((i + 1) / rows.length) * 100));
+    }
+    setResults({ ok, failed, total: rows.length });
+    setPhase("done");
+    if (ok > 0) onImported();
+  };
+
+  const EXPECTED = ["business_name","industry","city","country","website_url","contact_name","contact_phone","contact_email"];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: 200, padding: 24,
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.97 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          background: "var(--bg-card)", border: "1px solid var(--border)",
+          borderRadius: 16, width: "100%", maxWidth: 680,
+          maxHeight: "90vh", overflow: "hidden",
+          display: "flex", flexDirection: "column",
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: "20px 24px", borderBottom: "1px solid var(--border)",
+          display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
+        }}>
+          <div>
+            <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+              Import Leads
+            </h3>
+            {file && phase !== "done" && (
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "var(--text-secondary)", margin: "3px 0 0" }}>
+                {file.name} · {rows.length} leads found
+              </p>
+            )}
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", fontSize: 18, lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
+
+          {/* ── Upload phase ── */}
+          {phase === "upload" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Drop zone */}
+              <motion.div
+                animate={{ borderColor: dragOver ? "var(--gold)" : "var(--border)", background: dragOver ? "var(--gold-dim)" : "transparent" }}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => inputRef.current?.click()}
+                style={{
+                  border: "2px dashed var(--border)", borderRadius: 12,
+                  padding: "40px 24px", textAlign: "center",
+                  cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
+                }}
+              >
+                <div style={{ fontSize: 28, marginBottom: 10 }}>⬆</div>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, color: "var(--text-primary)", margin: "0 0 4px" }}>
+                  Drop your CSV here or click to browse
+                </p>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "var(--text-secondary)", margin: 0 }}>
+                  .csv files only
+                </p>
+                <input ref={inputRef} type="file" accept=".csv" style={{ display: "none" }}
+                  onChange={(e) => handleFile(e.target.files[0])} />
+              </motion.div>
+
+              {/* Expected columns */}
+              <div style={{ background: "var(--bg-secondary)", borderRadius: 10, padding: "14px 16px" }}>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "var(--text-secondary)", letterSpacing: "0.08em", margin: "0 0 10px" }}>
+                  EXPECTED COLUMNS
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {EXPECTED.map(col => (
+                    <span key={col} style={{
+                      fontFamily: "'DM Mono', monospace", fontSize: 10,
+                      background: "var(--bg-card)", border: "1px solid var(--border)",
+                      borderRadius: 5, padding: "3px 8px", color: "var(--text-secondary)",
+                    }}>{col}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Download sample */}
+              <button onClick={downloadSample} style={{
+                fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500,
+                padding: "9px 16px", borderRadius: 9, border: "1px solid var(--border)",
+                background: "transparent", color: "var(--text-secondary)", cursor: "pointer",
+                textAlign: "left",
+              }}>
+                ⬇ Download sample CSV
+              </button>
+            </div>
+          )}
+
+          {/* ── Preview phase ── */}
+          {phase === "preview" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "var(--text-secondary)" }}>
+                  Showing first 5 of {rows.length} rows
+                </span>
+                <span style={{
+                  fontFamily: "'DM Mono', monospace", fontSize: 11, fontWeight: 600,
+                  color: "var(--gold)", background: "var(--gold-dim)",
+                  border: "1px solid var(--gold)", borderRadius: 6, padding: "2px 10px",
+                }}>
+                  {rows.length} leads found
+                </span>
+              </div>
+
+              {/* Preview table */}
+              <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 500 }}>
+                  <thead>
+                    <tr style={{ background: "var(--bg-secondary)" }}>
+                      {headers.slice(0, 5).map(h => (
+                        <th key={h} style={{
+                          fontFamily: "'DM Mono', monospace", fontSize: 10,
+                          color: "var(--text-secondary)", letterSpacing: "0.06em",
+                          padding: "8px 12px", textAlign: "left", fontWeight: 500,
+                          borderBottom: "1px solid var(--border)",
+                        }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.slice(0, 5).map((row, i) => (
+                      <tr key={i} style={{ borderBottom: i < 4 ? "1px solid var(--border)" : "none" }}>
+                        {headers.slice(0, 5).map(h => (
+                          <td key={h} style={{
+                            fontFamily: "'DM Sans', sans-serif", fontSize: 12,
+                            color: "var(--text-primary)", padding: "9px 12px",
+                            maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          }}>{row[h] || <span style={{ color: "var(--text-secondary)", opacity: 0.5 }}>—</span>}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button onClick={() => { setPhase("upload"); setFile(null); setRows([]); }} style={{
+                  fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "9px 18px",
+                  borderRadius: 9, border: "1px solid var(--border)",
+                  background: "transparent", color: "var(--text-secondary)", cursor: "pointer",
+                }}>Change file</button>
+                <PrimaryBtn onClick={runImport}>Import {rows.length} leads</PrimaryBtn>
+              </div>
+            </div>
+          )}
+
+          {/* ── Importing phase ── */}
+          {phase === "importing" && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: "20px 0" }}>
+              <div style={{ fontSize: 24 }}>⏳</div>
+              <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
+                Importing leads…
+              </p>
+              <div style={{ width: "100%", background: "var(--border)", borderRadius: 100, height: 6, overflow: "hidden" }}>
+                <motion.div
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.3 }}
+                  style={{ height: "100%", background: "var(--gold)", borderRadius: 100 }}
+                />
+              </div>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "var(--text-secondary)", margin: 0 }}>
+                {progress}% · {Math.round(rows.length * progress / 100)} / {rows.length}
+              </p>
+            </div>
+          )}
+
+          {/* ── Done phase ── */}
+          {phase === "done" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{
+                  flex: 1, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)",
+                  borderRadius: 10, padding: "16px", textAlign: "center",
+                }}>
+                  <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 700, color: "#10B981" }}>{results.ok}</div>
+                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>imported</div>
+                </div>
+                {results.failed.length > 0 && (
+                  <div style={{
+                    flex: 1, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+                    borderRadius: 10, padding: "16px", textAlign: "center",
+                  }}>
+                    <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 700, color: "#EF4444" }}>{results.failed.length}</div>
+                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>failed</div>
+                  </div>
+                )}
+              </div>
+
+              {results.failed.length > 0 && (
+                <div style={{ background: "var(--bg-secondary)", borderRadius: 10, padding: "14px 16px" }}>
+                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "var(--text-secondary)", letterSpacing: "0.08em", margin: "0 0 10px" }}>
+                    FAILED ROWS
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {results.failed.map((f, i) => (
+                      <div key={i} style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "var(--text-secondary)" }}>Row {f.row}</span>
+                        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "var(--text-primary)", fontWeight: 500 }}>{f.name}</span>
+                        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#EF4444", marginLeft: "auto" }}>{f.reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <PrimaryBtn onClick={onClose}>Done</PrimaryBtn>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function PipelinePage() {
   const [leads,         setLeads]         = useState([]);
@@ -501,6 +819,7 @@ export default function PipelinePage() {
   const [taskLead,      setTaskLead]      = useState(null);
   const [localTags,     setLocalTags]     = useState({});
   const [localFollowUp, setLocalFollowUp] = useState({});
+  const [showImport,    setShowImport]    = useState(false);
 
   useEffect(() => { fetchLeads(); }, []);
 
@@ -559,6 +878,7 @@ export default function PipelinePage() {
     <Shell
       topbarText={loading ? "Pipeline" : `${leads.length} leads · ${counts.callback || 0} callbacks pending`}
       onAddLead={() => setShowAddLead(true)}
+      onImport={() => setShowImport(true)}
     >
       <AnimatePresence>
         {showAddLead && (
@@ -569,6 +889,9 @@ export default function PipelinePage() {
         )}
         {taskLead && (
           <TaskModal key="task" lead={taskLead} onClose={() => setTaskLead(null)} onSaved={() => {}} />
+        )}
+        {showImport && (
+          <ImportModal key="import" onClose={() => setShowImport(false)} onImported={fetchLeads} />
         )}
       </AnimatePresence>
 
