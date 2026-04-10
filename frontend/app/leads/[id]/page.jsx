@@ -466,7 +466,6 @@ function NotesSection({ notes, setNotes, onSave }) {
       <textarea
         value={notes}
         onChange={e => setNotes(e.target.value)}
-        onBlur={() => onSave(notes)}
         placeholder="Add notes about this lead…"
         rows={5}
         style={{
