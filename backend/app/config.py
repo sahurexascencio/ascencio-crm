@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -8,14 +9,18 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 480
 
-    twilio_account_sid: str
-    twilio_auth_token: str
-    twilio_phone_number: str
+    twilio_account_sid: Optional[str] = None
+    twilio_auth_token: Optional[str] = None
+    twilio_phone_number: Optional[str] = "+16624934617"
+    twilio_api_key: Optional[str] = None
+    twilio_api_secret: Optional[str] = None
+    twilio_twiml_app_sid: Optional[str] = None
 
     app_env: str = "development"
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 settings = Settings()

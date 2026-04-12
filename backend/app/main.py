@@ -1,12 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, leads, contacts, calls, bookings, intelligence, tasks, templates, messages
-
-app = FastAPI(
-    title="Ascencio CRM",
-    description="Performance-based agency CRM",
-    version="1.1.0",
+from app.routes import (
+    auth, leads, contacts, calls, bookings, intelligence,
+    tasks, templates, messages, imports, services, twilio_import, users
 )
+
+app = FastAPI(title="Ascencio CRM", version="1.4.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,8 +24,12 @@ app.include_router(intelligence.router)
 app.include_router(tasks.router)
 app.include_router(templates.router)
 app.include_router(messages.router)
+app.include_router(imports.router)
+app.include_router(services.router)
+app.include_router(twilio_import.router)
+app.include_router(users.router)
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "1.1.0"}
+    return {"status": "ok", "version": "1.4.0"}

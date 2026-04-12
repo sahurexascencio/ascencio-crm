@@ -1,138 +1,177 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request, Form
+from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import Response
+from pydantic import BaseModel
 from uuid import UUID
 from typing import Optional
 from app.db import get_db
-from app.models.call import CallCreate, CallUpdate, CallOut, TwilioCallbackPayload
-from app.middleware.auth import decode_token, require_caller, TokenData
-from app.services.twilio_service import initiate_call, build_connect_twiml
-from app.config import settings
+from app.middleware.auth import decode_token, TokenData
+import os, httpx
+from dotenv import load_dotenv
+load_dotenv()
 
 router = APIRouter(prefix="/calls", tags=["calls"])
 
-def serialize(data: dict) -> dict:
-    from uuid import UUID
-    return {k: str(v) if isinstance(v, UUID) else v for k, v in data.items()}
+
+def twilio_client():
+    from twilio.rest import Client
+    return Client(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
 
 
-WEBHOOK_BASE = "https://your-railway-app.up.railway.app"  # update post-deploy
+# ── Access token — works WITHOUT a TwiML App SID ─────────────────────────────
+@router.get("/token")
+def get_access_token(token: TokenData = Depends(decode_token)):
+    try:
+        from twilio.jwt.access_token import AccessToken
+        from twilio.jwt.access_token.grants import VoiceGrant
+
+        account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        api_key     = os.getenv("TWILIO_API_KEY")
+        api_secret  = os.getenv("TWILIO_API_SECRET")
+
+        if not all([account_sid, api_key, api_secret]):
+            raise HTTPException(
+                status_code=500,
+                detail="Missing TWILIO_ACCOUNT_SID, TWILIO_API_KEY or TWILIO_API_SECRET in .env"
+            )
+
+        twiml_app_sid = os.getenv("TWILIO_TWIML_APP_SID", "")
+
+        access_token = AccessToken(
+            account_sid, api_key, api_secret,
+            identity=str(token.user_id), ttl=3600
+            # no region — use US-Default key only
+        )
+        voice_grant = VoiceGrant(
+            outgoing_application_sid=twiml_app_sid if twiml_app_sid else None,
+            incoming_allow=False
+        )
+        access_token.add_grant(voice_grant)
+        jwt = access_token.to_jwt()
+        # to_jwt() may return bytes in some versions
+        if isinstance(jwt, bytes):
+            jwt = jwt.decode('utf-8')
+
+        return {
+            "token": jwt,
+            "identity": str(token.user_id),
+            "has_twiml_app": bool(twiml_app_sid),
+        }
+
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="Run: py -3.12 -m pip install twilio --break-system-packages"
+        )
 
 
-@router.post("/initiate", response_model=CallOut, status_code=status.HTTP_201_CREATED)
-def start_call(data: CallCreate, token: TokenData = Depends(require_caller)):
-    """
-    Click-to-call. Fetches contact phone, bridges via Twilio,
-    creates a call record and returns it.
-    """
-    db = get_db()
+# ── TwiML — Twilio calls this when a browser call connects ────────────────────
+@router.post("/twiml")
+async def twiml_handler(request: Request):
+    form = await request.form()
+    to_number   = form.get("To", "")
+    from_number = os.getenv("TWILIO_PHONE_NUMBER", "+16624934617")
 
-    # Get contact phone
-    if not data.contact_id:
-        # Fall back to primary contact for the lead
-        contact_result = db.table("contacts").select("phone").eq("lead_id", str(data.lead_id)).eq("is_primary", True).single().execute()
+    if not to_number:
+        xml = '<?xml version="1.0" encoding="UTF-8"?><Response><Say>No number provided.</Say></Response>'
     else:
-        contact_result = db.table("contacts").select("phone").eq("id", str(data.contact_id)).single().execute()
+        xml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Dial callerId="{from_number}">
+    <Number>{to_number}</Number>
+  </Dial>
+</Response>'''
 
-    if not contact_result.data:
-        raise HTTPException(status_code=404, detail="Contact not found or no phone number")
+    return Response(content=xml, media_type="application/xml")
 
-    lead_phone = contact_result.data["phone"]
 
-    # Get caller phone from user profile
-    caller_result = db.table("users").select("phone").eq("id", token.user_id).single().execute()
-    if not caller_result.data or not caller_result.data.get("phone"):
-        raise HTTPException(status_code=400, detail="Caller has no phone number on file")
+# ── Log a call ────────────────────────────────────────────────────────────────
+class CallLog(BaseModel):
+    lead_id: UUID
+    contact_id: Optional[UUID] = None
+    twilio_call_sid: Optional[str] = None
+    direction: str = "outbound"
+    duration_seconds: int = 0
+    outcome: str = "no_answer"
+    notes: Optional[str] = None
+    called_at: Optional[str] = None
 
-    caller_phone = caller_result.data["phone"]
 
-    # Initiate via Twilio
-    call_sid = initiate_call(lead_phone, caller_phone, WEBHOOK_BASE)
-
-    # Create call record
+@router.post("/log")
+def log_call(data: CallLog, token: TokenData = Depends(decode_token)):
+    db = get_db()
     result = db.table("calls").insert({
-        "lead_id": str(data.lead_id),
-        "contact_id": str(data.contact_id) if data.contact_id else None,
-        "caller_id": token.user_id,
-        "twilio_call_sid": call_sid,
-        "direction": data.direction.value,
-        "outcome": "in_progress",
-        "notes": data.notes,
+        "lead_id":          str(data.lead_id),
+        "contact_id":       str(data.contact_id) if data.contact_id else None,
+        "caller_id":        str(token.user_id),
+        "twilio_call_sid":  data.twilio_call_sid,
+        "direction":        data.direction,
+        "duration_seconds": data.duration_seconds,
+        "outcome":          data.outcome,
+        "notes":            data.notes,
+        "called_at":        data.called_at or "now()",
     }).execute()
-
+    db.table("leads").update({"last_contacted_at": "now()"}).eq("id", str(data.lead_id)).execute()
     return result.data[0]
 
 
-@router.get("/lead/{lead_id}", response_model=list[CallOut])
-def get_calls_for_lead(lead_id: UUID, token: TokenData = Depends(decode_token)):
+# ── Get calls for a lead ──────────────────────────────────────────────────────
+@router.get("/lead/{lead_id}")
+def get_calls(lead_id: UUID, token: TokenData = Depends(decode_token)):
     db = get_db()
     result = db.table("calls").select("*").eq("lead_id", str(lead_id)).order("called_at", desc=True).execute()
     return result.data
 
 
-@router.patch("/{call_id}", response_model=CallOut)
-def update_call(call_id: UUID, data: CallUpdate, token: TokenData = Depends(decode_token)):
-    """Manually update outcome/notes after a call ends."""
+# ── Stats ─────────────────────────────────────────────────────────────────────
+@router.get("/stats")
+def call_stats(token: TokenData = Depends(decode_token)):
     db = get_db()
-    payload = {k: v for k, v in data.model_dump().items() if v is not None}
-    result = db.table("calls").update(serialize(payload)).eq("id", str(call_id)).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Call not found")
-    return result.data[0]
+    calls = db.table("calls").select("duration_seconds").execute().data
+    total_seconds = sum(c.get("duration_seconds", 0) or 0 for c in calls)
+    total_minutes = round(total_seconds / 60, 1)
+    cost_usd = round(total_minutes * 0.045, 2)  # ~$0.045/min to UK mobiles
+    remaining = round(14.34 - cost_usd, 2)
+    return {
+        "total_calls": len(calls),
+        "total_minutes": total_minutes,
+        "total_seconds": total_seconds,
+        "cost_estimate_usd": cost_usd,
+        "trial_credit_remaining_estimate": max(0, remaining),
+    }
 
 
-# ── Twilio TwiML endpoint ──────────────────────────────────────────────────
+# ── Import Twilio CSV ─────────────────────────────────────────────────────────
+@router.post("/import")
+async def import_calls(request: Request, token: TokenData = Depends(decode_token)):
+    import pandas as pd, io
+    body = await request.body()
+    try:
+        df = pd.read_csv(io.BytesIO(body))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/twiml/connect")
-def twiml_connect(to: str):
-    """Returns TwiML that bridges caller to lead number."""
-    twiml = build_connect_twiml(to)
-    return Response(content=twiml, media_type="application/xml")
-
-
-# ── Twilio Webhooks ────────────────────────────────────────────────────────
-
-@router.post("/webhook/status")
-async def twilio_call_status(request: Request):
-    """
-    Twilio posts here on call status changes.
-    Updates call record when call completes.
-    """
-    form = await request.form()
-    call_sid = form.get("CallSid")
-    call_status = form.get("CallStatus")
-    duration = form.get("CallDuration")
-
-    if not call_sid:
-        return Response(status_code=200)
-
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
     db = get_db()
-    update_payload = {}
-
-    if call_status in ("completed", "busy", "failed", "no-answer", "canceled"):
-        if duration:
-            update_payload["duration_seconds"] = int(duration)
-        if call_status == "no-answer":
-            update_payload["outcome"] = "no_answer"
-        elif call_status == "busy":
-            update_payload["outcome"] = "no_answer"
-        elif call_status == "completed" and not update_payload.get("outcome"):
-            update_payload["outcome"] = "in_progress"  # caller updates manually
-
-    if update_payload:
-        db.table("calls").update(update_payload).eq("twilio_call_sid", call_sid).execute()
-
-    return Response(status_code=200)
-
-
-@router.post("/webhook/recording")
-async def twilio_recording(request: Request):
-    """Saves recording URL when Twilio finishes processing."""
-    form = await request.form()
-    call_sid = form.get("CallSid")
-    recording_url = form.get("RecordingUrl")
-
-    if call_sid and recording_url:
-        db = get_db()
-        db.table("calls").update({"recording_url": f"{recording_url}.mp3"}).eq("twilio_call_sid", call_sid).execute()
-
-    return Response(status_code=200)
+    matched = 0
+    for _, row in df.iterrows():
+        try:
+            phone = str(row.get("to", "") or row.get("from", "") or "").strip()
+            if not phone:
+                continue
+            contact = db.table("contacts").select("id, lead_id").eq("phone", phone).execute()
+            if not contact.data:
+                continue
+            lead_id = contact.data[0]["lead_id"]
+            db.table("calls").insert({
+                "lead_id": lead_id,
+                "twilio_call_sid": str(row.get("callsid", "") or ""),
+                "direction": "outbound",
+                "duration_seconds": int(float(row.get("duration", 0) or 0)),
+                "outcome": "completed" if str(row.get("status", "")).lower() == "completed" else "no_answer",
+                "called_at": str(row.get("starttime", "")) or None,
+            }).execute()
+            db.table("leads").update({"last_contacted_at": "now()"}).eq("id", lead_id).execute()
+            matched += 1
+        except Exception:
+            continue
+    return {"matched": matched, "total": len(df)}
