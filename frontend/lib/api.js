@@ -1,4 +1,4 @@
-const BASE = "https://ascencio-crm-production.up.railway.app";
+const BASE = "http://localhost:8000";
 
 function getToken() {
   if (typeof window === "undefined") return null;
@@ -31,20 +31,29 @@ async function request(path, options = {}) {
   return res.json();
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
 export const auth = {
   login: (email, password) =>
     request(`/auth/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`, { method: "POST" }),
 };
 
-// ── Leads ─────────────────────────────────────────────────────────────────────
 export const leads = {
-  list: (status, assignedTo) => {
+  list: (filters = {}) => {
     const params = new URLSearchParams();
-    if (status) params.append("status", status);
-    if (assignedTo) params.append("assigned_to", assignedTo);
+    const allowed = [
+      "status","city","assigned_to","industry","search","tag",
+      "opportunity_source","campaign_type","value_min","value_max",
+      "created_after","created_before","updated_after","updated_before",
+      "contacted_after","contacted_before","won_after","won_before",
+      "lost_after","lost_before","sort_by","sort_dir","limit","offset",
+    ];
+    allowed.forEach(k => {
+      if (filters[k] !== undefined && filters[k] !== "" && filters[k] !== null)
+        params.append(k, filters[k]);
+    });
     return request(`/leads?${params}`);
   },
+  cities: () => request("/leads/cities"),
+  cityCounts: () => request("/leads/cities/counts"),
   get: (id) => request(`/leads/${id}`),
   create: (data) => request("/leads", { method: "POST", body: JSON.stringify(data) }),
   update: (id, data) => request(`/leads/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
@@ -54,7 +63,6 @@ export const leads = {
   delete: (id) => request(`/leads/${id}`, { method: "DELETE" }),
 };
 
-// ── Contacts ──────────────────────────────────────────────────────────────────
 export const contacts = {
   forLead: (leadId) => request(`/contacts/lead/${leadId}`),
   create: (data) => request("/contacts", { method: "POST", body: JSON.stringify(data) }),
@@ -62,21 +70,18 @@ export const contacts = {
   delete: (id) => request(`/contacts/${id}`, { method: "DELETE" }),
 };
 
-// ── Calls ─────────────────────────────────────────────────────────────────────
 export const calls = {
   forLead: (leadId) => request(`/calls/lead/${leadId}`),
   initiate: (data) => request("/calls/initiate", { method: "POST", body: JSON.stringify(data) }),
   update: (id, data) => request(`/calls/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 };
 
-// ── Intelligence ──────────────────────────────────────────────────────────────
 export const intelligence = {
   get: (leadId) => request(`/intelligence/${leadId}`),
   brief: (leadId) => request(`/intelligence/${leadId}/brief`),
   refresh: (leadId) => request(`/intelligence/${leadId}/refresh`, { method: "POST" }),
 };
 
-// ── Bookings ──────────────────────────────────────────────────────────────────
 export const bookings = {
   list: (status, leadId) => {
     const params = new URLSearchParams();
@@ -89,7 +94,6 @@ export const bookings = {
   update: (id, data) => request(`/bookings/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 };
 
-// ── Tasks ─────────────────────────────────────────────────────────────────────
 export const tasks = {
   forLead: (leadId) => request(`/tasks/lead/${leadId}`),
   upcoming: () => request("/tasks/upcoming"),
@@ -98,7 +102,6 @@ export const tasks = {
   delete: (id) => request(`/tasks/${id}`, { method: "DELETE" }),
 };
 
-// ── Templates ─────────────────────────────────────────────────────────────────
 export const templates = {
   list: (type) => request(`/templates${type ? `?type=${type}` : ""}`),
   create: (data) => request("/templates", { method: "POST", body: JSON.stringify(data) }),
@@ -106,8 +109,22 @@ export const templates = {
   delete: (id) => request(`/templates/${id}`, { method: "DELETE" }),
 };
 
-// ── Messages ──────────────────────────────────────────────────────────────────
 export const messages = {
   forLead: (leadId) => request(`/messages/lead/${leadId}`),
   sendSMS: (data) => request("/messages/sms", { method: "POST", body: JSON.stringify(data) }),
+};
+
+export const imports = {
+  leads: (file, cityOverride = null, industry = "clinic") => {
+    const token = getToken();
+    const form = new FormData();
+    form.append("file", file);
+    if (cityOverride) form.append("city_override", cityOverride);
+    form.append("industry", industry);
+    return fetch(`${BASE}/import/leads`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    }).then(r => r.json());
+  },
 };
