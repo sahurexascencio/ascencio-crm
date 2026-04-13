@@ -6,7 +6,6 @@ from typing import Optional
 from app.db import get_db
 from app.middleware.auth import decode_token, TokenData
 import os, httpx
-from datetime import datetime, timezone
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -104,9 +103,9 @@ def log_call(data: CallLog, token: TokenData = Depends(decode_token)):
         "duration_seconds": data.duration_seconds,
         "outcome":          data.outcome,
         "notes":            data.notes,
-        "called_at":        data.called_at or datetime.now(timezone.utc).isoformat(),
+        "called_at":        data.called_at or "now()",
     }).execute()
-    db.table("leads").update({"last_contacted_at": datetime.now(timezone.utc).isoformat()}).eq("id", str(data.lead_id)).execute()
+    db.table("leads").update({"last_contacted_at": "now()"}).eq("id", str(data.lead_id)).execute()
     return result.data[0]
 
 
@@ -171,3 +170,57 @@ async def import_calls(request: Request, token: TokenData = Depends(decode_token
         except Exception:
             continue
     return {"matched": matched, "total": len(df)}
+
+
+# ── Log a manual call (no lead_id required) ────────────────────────────────
+class ManualCallLog(BaseModel):
+    phone_number: Optional[str] = None
+    twilio_call_sid: Optional[str] = None
+    direction: str = "outbound"
+    duration_seconds: int = 0
+    outcome: str = "no_answer"
+    notes: Optional[str] = None
+    called_at: Optional[str] = None
+
+@router.post("/log_manual")
+def log_manual_call(data: ManualCallLog, token: TokenData = Depends(decode_token)):
+    from datetime import datetime, timezone
+    db = get_db()
+    # Try to find lead by phone number
+    lead_id = None
+    business_name = None
+    if data.phone_number:
+        contact = db.table("contacts").select("lead_id, leads(business_name)").eq("phone", data.phone_number).execute()
+        if contact.data:
+            lead_id = contact.data[0].get("lead_id")
+            business_name = contact.data[0].get("leads", {}).get("business_name")
+
+    result = db.table("calls").insert({
+        "lead_id":          lead_id,
+        "caller_id":        str(token.user_id),
+        "twilio_call_sid":  data.twilio_call_sid,
+        "direction":        data.direction,
+        "duration_seconds": data.duration_seconds,
+        "outcome":          data.outcome,
+        "notes":            data.notes,
+        "called_at":        data.called_at or datetime.now(timezone.utc).isoformat(),
+        "phone_number":     data.phone_number,
+    }).execute()
+
+    if lead_id:
+        db.table("leads").update({"last_contacted_at": datetime.now(timezone.utc).isoformat()}).eq("id", lead_id).execute()
+
+    return {**result.data[0], "business_name": business_name}
+
+
+# ── Recent calls for dialer log ────────────────────────────────────────────
+@router.get("/recent")
+def recent_calls(token: TokenData = Depends(decode_token)):
+    db = get_db()
+    result = db.table("calls").select("*, leads(business_name)").order("called_at", desc=True).limit(50).execute()
+    out = []
+    for c in result.data:
+        row = {**c}
+        row["business_name"] = c.get("leads", {}).get("business_name") if c.get("leads") else None
+        out.append(row)
+    return out

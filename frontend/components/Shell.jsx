@@ -71,6 +71,7 @@ export default function Shell({ children, topbarText }) {
           <NavItem icon="◎" label="Pre-Call Brief"  href="/brief"    active={pathname === "/brief"} />
           <NavItem icon="✉" label="Inbox"           href="/inbox"    active={pathname === "/inbox"} />
           <NavItem icon="◇" label="Revenue"         href="/revenue"  active={pathname === "/revenue"} />
+          <NavItem icon="📞" label="Dialer"           href="/dialer"   active={pathname === "/dialer"} />
         </div>
 
         <div style={{ marginTop: 16 }}>

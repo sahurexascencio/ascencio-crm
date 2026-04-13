@@ -59,18 +59,18 @@ function TagSelector({ selectedTags = [], onChange }) {
 }
 
 export default function PipelinePage() {
-  const [leads, setLeads]           = useState([]);
-  const [contacts, setContacts]     = useState({});
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState("");
-  const [activeCity, setActiveCity] = useState("All");
-  const [search, setSearch]         = useState("");
-  const [filters, setFilters]       = useState(EMPTY_FILTERS);
-  const [showFilters, setShowFilters] = useState(false);
+  const [leads, setLeads]               = useState([]);
+  const [contacts, setContacts]         = useState({});
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState("");
+  const [activeCity, setActiveCity]     = useState("All");
+  const [search, setSearch]             = useState("");
+  const [filters, setFilters]           = useState(EMPTY_FILTERS);
+  const [showFilters, setShowFilters]   = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
-  const [taskLead, setTaskLead]     = useState(null);
-  const [callTarget, setCallTarget] = useState(null);
-  const [localTags, setLocalTags]   = useState({});
+  const [taskLead, setTaskLead]         = useState(null);
+  const [callTarget, setCallTarget]     = useState(null);
+  const [localTags, setLocalTags]       = useState({});
   const [localFollowUp, setLocalFollowUp] = useState({});
   const searchTimer = useRef(null);
 
@@ -148,7 +148,6 @@ export default function PipelinePage() {
       )}
 
       <div className="fade-up">
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
           <div>
             <h2 style={{ ...T.heading, fontSize: 22, color: C.text, fontWeight: 700, marginBottom: 4 }}>Pipeline</h2>
@@ -167,7 +166,6 @@ export default function PipelinePage() {
         <CityTabs activeCity={activeCity} onChange={setActiveCity} />
         <CallStatsBar />
 
-        {/* Table header */}
         <div style={{ display: "grid", gridTemplateColumns: COLS, gap: 12, padding: "7px 16px 10px", borderBottom: `1px solid ${C.border}` }}>
           {["Business / Address", "Owner", "Phone", "Actions", "Follow Up", "Stage", "Last Contact", "Tags"].map((h, i) => (
             <span key={i} style={{ ...T.mono, fontSize: 10, color: C.muted, letterSpacing: "0.07em" }}>{h.toUpperCase()}</span>
@@ -203,7 +201,6 @@ export default function PipelinePage() {
 
                 <div style={{ ...T.mono, fontSize: 11, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{contact?.phone || "—"}</div>
 
-                {/* Action buttons */}
                 <div style={{ display: "flex", gap: 4 }} onClick={e => e.stopPropagation()}>
                   <button title="Call" onClick={() => setCallTarget({ lead, contact })}
                     style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${C.confirmedBg}`, background: C.confirmedBg, color: C.confirmed, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>📞</button>
@@ -213,7 +210,6 @@ export default function PipelinePage() {
                     style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${C.callbackBg}`, background: C.callbackBg, color: C.callback, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>📅</button>
                 </div>
 
-                {/* Follow up dots */}
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <div style={{ display: "flex", gap: 2 }}>
                     {Array.from({ length: 8 }).map((_, i) => (
@@ -244,7 +240,7 @@ export default function PipelinePage() {
 
           {!loading && leads.length === 0 && (
             <div style={{ textAlign: "center", padding: "48px 0", ...T.body, fontSize: 13, color: C.muted }}>
-              No leads found{activeCity !== "All" ? ` in ${activeCity}` : ""}. Try adjusting your filters.
+              No leads found. Try adjusting your filters.
             </div>
           )}
         </div>
