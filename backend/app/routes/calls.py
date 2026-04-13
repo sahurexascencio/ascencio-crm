@@ -109,6 +109,26 @@ def log_call(data: CallLog, token: TokenData = Depends(decode_token)):
     return result.data[0]
 
 
+
+# ── Live Twilio balance (separate async endpoint) ─────────────────────────────
+@router.get("/balance")
+async def get_balance(token: TokenData = Depends(decode_token)):
+    import base64, httpx
+    sid       = os.getenv("TWILIO_ACCOUNT_SID")
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+    if not sid or not auth_token:
+        return {"balance": None, "currency": "USD"}
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            r = await client.get(
+                f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Balance.json",
+                auth=(sid, auth_token)
+            )
+            data = r.json()
+            return {"balance": round(float(data["balance"]), 2), "currency": data.get("currency", "USD")}
+    except:
+        return {"balance": None, "currency": "USD"}
+
 # ── Get calls for a lead ──────────────────────────────────────────────────────
 @router.get("/lead/{lead_id}")
 def get_calls(lead_id: UUID, token: TokenData = Depends(decode_token)):
@@ -124,14 +144,14 @@ def call_stats(token: TokenData = Depends(decode_token)):
     calls = db.table("calls").select("duration_seconds").execute().data
     total_seconds = sum(c.get("duration_seconds", 0) or 0 for c in calls)
     total_minutes = round(total_seconds / 60, 1)
-    cost_usd = round(total_minutes * 0.045, 2)  # ~$0.045/min to UK mobiles
-    remaining = round(14.34 - cost_usd, 2)
+    cost_usd = round(total_minutes * 0.045, 2)
+
     return {
         "total_calls": len(calls),
         "total_minutes": total_minutes,
         "total_seconds": total_seconds,
         "cost_estimate_usd": cost_usd,
-        "trial_credit_remaining_estimate": max(0, remaining),
+        "trial_credit_remaining_estimate": max(0, round(14.34 - cost_usd, 2)),
     }
 
 

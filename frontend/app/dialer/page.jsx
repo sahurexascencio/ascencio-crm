@@ -5,9 +5,14 @@ import { C, T } from "@/lib/tokens";
 
 const BASE = "http://localhost:8000";
 const getToken = () => typeof window !== "undefined" ? localStorage.getItem("ascencio_token") : null;
-const req = (path, opts = {}) => fetch(`${BASE}${path}`, {
-  ...opts, headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}`, ...(opts.headers || {}) }
-}).then(r => r.json());
+const req = async (path, opts = {}) => {
+  const r = await fetch(`${BASE}${path}`, {
+    ...opts, headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}`, ...(opts.headers || {}) }
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.detail || JSON.stringify(data));
+  return data;
+};
 
 const OUTCOMES = [
   { value: "completed",          label: "Connected" },
