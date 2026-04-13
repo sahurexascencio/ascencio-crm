@@ -53,11 +53,20 @@ function ScoreRing({ score }) {
 }
 
 export default function BriefPage() {
-  const [leads, setLeads] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const [leads, setLeads] = useState(() => {
+    if (typeof window === "undefined") return [];
+    try { const s = localStorage.getItem("ascencio_brief"); return s ? JSON.parse(s) : []; } catch { return []; }
+  });
+  const [selected, setSelected] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try { const s = localStorage.getItem("ascencio_brief"); const d = s ? JSON.parse(s) : []; return d[0] || null; } catch { return null; }
+  });
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const fileRef = useRef();
+
+  // Restore from localStorage on mount
+
 
   const handleFile = async (file) => {
     setError("");
@@ -83,8 +92,10 @@ export default function BriefPage() {
       }
       const data = JSON.parse(out.join(""));
       if (!Array.isArray(data) || !data.length) throw new Error("Empty result");
+      localStorage.setItem("ascencio_brief", JSON.stringify(data));
       setLeads(data);
       setSelected(data[0]);
+      localStorage.setItem("ascencio_brief", JSON.stringify(data));
     } catch (err) {
       setError("Parse error: " + err.message + " — send the file to Claude in chat to fix it");
     }
@@ -148,7 +159,7 @@ export default function BriefPage() {
                   </button>
                 );
               })}
-              <button onClick={() => { setLeads([]); setSelected(null); setSearch(""); }}
+              <button onClick={() => { setLeads([]); setSelected(null); setSearch(""); localStorage.removeItem("ascencio_brief"); }}
                 style={{ width: "100%", padding: "8px", border: "none", borderTop: `1px solid ${C.border}`, background: "transparent", ...T.mono, fontSize: 11, color: C.muted, cursor: "pointer" }}>
                 ↺ Load new file
               </button>

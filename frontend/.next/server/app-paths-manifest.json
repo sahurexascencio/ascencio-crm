@@ -1,4 +1,5 @@
 {
   "/pipeline/page": "app/pipeline/page.js",
-  "/dialer/page": "app/dialer/page.js"
+  "/dialer/page": "app/dialer/page.js",
+  "/brief/page": "app/brief/page.js"
 }
