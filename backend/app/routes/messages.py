@@ -6,6 +6,7 @@ from typing import Optional
 from app.db import get_db
 from app.middleware.auth import decode_token, TokenData
 import os, httpx
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 
@@ -135,13 +136,13 @@ async def incoming_sms(request: Request):
             "status":       "received",
         }).execute()
         # Update last_contacted_at
-        db.table("leads").update({"last_contacted_at": "now()"}).eq("id", lead_id).execute()
+        db.table("leads").update({"last_contacted_at": datetime.now(timezone.utc).isoformat()}).eq("id", lead_id).execute()
 
     # Twilio expects XML response
     return Response(
-    content='<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
-    media_type="application/xml"
-)
+        body='<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        media_type="application/xml"
+    )
 
 
 # ── Get all messages for a lead ───────────────────────────────────────────────

@@ -16,10 +16,20 @@
       "static/chunks/main-app.js",
       "static/chunks/app/pipeline/page.js"
     ],
+    "/brief/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/brief/page.js"
+    ],
     "/inbox/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/inbox/page.js"
+    ],
+    "/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/login/page.js"
     ]
   }
 }

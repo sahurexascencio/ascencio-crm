@@ -32,6 +32,8 @@ export default function CallBar({ lead, contact, onClose, onCallLogged }) {
   // Load Twilio SDK + get token
   useEffect(() => {
     let dev;
+    let cancelled = false;
+
     const init = async () => {
       try {
         const { Device } = await import("@twilio/voice-sdk");
@@ -40,19 +42,31 @@ export default function CallBar({ lead, contact, onClose, onCallLogged }) {
         });
         const data = await res.json();
         if (data.detail) throw new Error(data.detail);
+        if (cancelled) return;
 
-        dev = new Device(data.token, { logLevel: 1, codecPreferences: ["opus", "pcmu"] });
-        dev.on("error", (err) => { console.error("Twilio error:", err); setStatus("idle"); });
+        dev = new Device(data.token, {
+          logLevel: 1,
+          codecPreferences: ["opus", "pcmu"],
+          edge: ["dublin", "frankfurt", "ashburn"],
+        });
+        dev.on("error", (err) => {
+          console.error("Twilio error:", err);
+          setStatus("idle");
+        });
         dev.on("disconnect", () => { setStatus("ended"); stopTimer(); });
         await dev.register();
-        setDevice(dev);
+        if (!cancelled) setDevice(dev);
       } catch (e) {
-        console.error("Twilio init failed:", e);
-        setStatus("error");
+        if (!cancelled) {
+          console.error("Twilio init failed:", e?.message || e);
+          // Retry once after 3 seconds
+          setTimeout(() => { if (!cancelled) init(); }, 3000);
+        }
       }
     };
+
     init();
-    return () => { dev?.destroy(); stopTimer(); };
+    return () => { cancelled = true; dev?.destroy(); stopTimer(); };
   }, []);
 
   const startTimer = () => {
@@ -174,7 +188,7 @@ export default function CallBar({ lead, contact, onClose, onCallLogged }) {
           {status === "idle" && (
             <button onClick={startCall} disabled={!device || !phoneNumber}
               style={{ flex: 1, padding: "12px", borderRadius: 10, border: "none", background: !device || !phoneNumber ? C.border : C.confirmed, color: "#FFF", ...T.body, fontSize: 14, fontWeight: 600, cursor: !device || !phoneNumber ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              📞 Call {phoneNumber || "—"}
+              {!device ? "⏳ Connecting..." : `📞 Call ${phoneNumber || "—"}`}
             </button>
           )}
 

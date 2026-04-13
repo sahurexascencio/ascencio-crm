@@ -6,6 +6,7 @@ from typing import Optional
 from app.db import get_db
 from app.middleware.auth import decode_token, TokenData
 import os, httpx
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -39,20 +40,15 @@ def get_access_token(token: TokenData = Depends(decode_token)):
         access_token = AccessToken(
             account_sid, api_key, api_secret,
             identity=str(token.user_id), ttl=3600
-            # no region — use US-Default key only
         )
         voice_grant = VoiceGrant(
             outgoing_application_sid=twiml_app_sid if twiml_app_sid else None,
             incoming_allow=False
         )
         access_token.add_grant(voice_grant)
-        jwt = access_token.to_jwt()
-        # to_jwt() may return bytes in some versions
-        if isinstance(jwt, bytes):
-            jwt = jwt.decode('utf-8')
 
         return {
-            "token": jwt,
+            "token": access_token.to_jwt(),
             "identity": str(token.user_id),
             "has_twiml_app": bool(twiml_app_sid),
         }
@@ -108,9 +104,9 @@ def log_call(data: CallLog, token: TokenData = Depends(decode_token)):
         "duration_seconds": data.duration_seconds,
         "outcome":          data.outcome,
         "notes":            data.notes,
-        "called_at":        data.called_at or "now()",
+        "called_at":        data.called_at or datetime.now(timezone.utc).isoformat(),
     }).execute()
-    db.table("leads").update({"last_contacted_at": "now()"}).eq("id", str(data.lead_id)).execute()
+    db.table("leads").update({"last_contacted_at": datetime.now(timezone.utc).isoformat()}).eq("id", str(data.lead_id)).execute()
     return result.data[0]
 
 
